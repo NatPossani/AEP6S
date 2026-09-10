@@ -4,11 +4,21 @@ PoC: Banco de Alimentos Comunitário
 
 A aplicação possui somente uma interface CLI, executada pelo terminal, sem frontend.
 O projeto foi pensado para demonstrar os conceitos de programação orientada a objetos, persistência em banco de dados NoSQL, operações CRUD, testes automatizados e organização básica de um projeto de software.
+
 2. ODS
 
 ODS 2 – Fome Zero e Agricultura Sustentável.
 A relação proposta é utilizar a tecnologia para organizar o cadastro de doações de alimentos que podem ser destinadas a instituições ou pessoas que necessitem de apoio.
-3. Funcionalidades
+
+3. Problema Identificado
+
+Gerenciar a doação de alimentos sem um padrão é desafiador. Sem um controle centralizado, o acompanhamento manual do estoque acaba sendo demorado, cansativo e muito propenso a erros. Fica difícil saber exatamente a quantidade de itens, as datas de validade, quem doou e qual foi o destino dos alimentos.
+
+Para resolver essa dor, surgiu a Prova de Conceito (PoC) do Banco de Alimentos Comunitário. Trata-se de um aplicativo simples e integrado que usa tecnologia para organizar todo o fluxo de mantimentos.
+
+Com ele, as operações básicas de cadastro, consulta, atualização e remoção de dados (CRUD) ficam centralizadas e salvas em um banco NoSQL. Na prática, isso garante um controle de estoque eficiente, melhora a rastreabilidade e garante que as doações cheguem com mais facilidade a quem realmente precisa.
+
+4. Funcionalidades
 
 Nesta primeira versão:
 cadastrar doação;
