@@ -50,9 +50,6 @@ Interface CLI.
 │       ├── MainTest.java
 │       └── MongoDoacaoRepositoryTest.java
 │
-├── docs/
-│   └── arquitetura.md
-│
 ├── Dockerfile
 ├── docker-compose.yml
 ├── pom.xml
