@@ -1,12 +1,15 @@
 AEP – Engenharia de Software – 6º Semestre
 PoC: Banco de Alimentos Comunitário
 1. Descrição
+
 A aplicação possui somente uma interface CLI, executada pelo terminal, sem frontend.
 O projeto foi pensado para demonstrar os conceitos de programação orientada a objetos, persistência em banco de dados NoSQL, operações CRUD, testes automatizados e organização básica de um projeto de software.
 2. ODS
+
 ODS 2 – Fome Zero e Agricultura Sustentável.
 A relação proposta é utilizar a tecnologia para organizar o cadastro de doações de alimentos que podem ser destinadas a instituições ou pessoas que necessitem de apoio.
 3. Funcionalidades
+
 Nesta primeira versão:
 cadastrar doação;
 listar doações;
@@ -16,6 +19,7 @@ excluir doação;
 sair do sistema.
 4. Requisitos técnicos
 Java 17;
+
 Maven;
 MongoDB;
 MongoDB Java Driver;
@@ -26,6 +30,7 @@ JaCoCo;
 Git/GitHub;
 Interface CLI.
 5. Estrutura
+
 ```
 .
 ├── src/
@@ -55,6 +60,7 @@ Interface CLI.
 └── .gitignore
 ```
 6. Pré-requisitos
+
 Para execução local:
 Java 17 ou superior;
 Maven 3.8 ou superior;
@@ -68,6 +74,7 @@ Para execução utilizando Docker:
 Docker;
 Docker Compose.
 7. Configuração do MongoDB
+
 A aplicação utiliza a variável de ambiente MONGO_URI.
 Na execução local, o valor padrão é:
 ```
@@ -86,6 +93,7 @@ Coleção:
 doacoes
 ```
 8. Execução Local
+
 Na raiz do projeto:
 ```
 mvn clean compile
@@ -101,6 +109,7 @@ PowerShell:
 $env:MONGO_URI="mongodb://localhost:27017"
 ```
 9. Execução com o Docker
+
 O projeto possui um Dockerfile para criar a imagem da aplicação e um docker-compose.yml para executar a aplicação junto com o MongoDB.
 Para iniciar:
 ```
@@ -140,6 +149,7 @@ mongodb://localhost:27017
 ```
 Além disso, o `pom.xml` possui uma regra que faz o build falhar caso a cobertura de linhas fique abaixo de 70%.
 11. MongoDB
+
 Exemplo de documento do banco:
 ```json
 {
