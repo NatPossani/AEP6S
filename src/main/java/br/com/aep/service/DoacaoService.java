@@ -6,9 +6,16 @@ import br.com.aep.repository.DoacaoRepository;
 import java.util.List;
 import java.util.UUID;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+
 public class DoacaoService {
 
     private final DoacaoRepository repository;
+
+    private static final DateTimeFormatter FORMATO_DATA =
+        DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public DoacaoService(DoacaoRepository repository) {
         this.repository = repository;
@@ -78,27 +85,41 @@ public class DoacaoService {
     private void validar(String nomeDoador, String alimento, int quantidade,
                          String unidade, String validade, String destino) {
         if (nomeDoador == null || nomeDoador.isBlank()) {
-            throw new IllegalArgumentException("O nome do doador é obrigatório.");
+            throw new IllegalArgumentException("Nome do doador é obrigatório.");
         }
 
         if (alimento == null || alimento.isBlank()) {
-            throw new IllegalArgumentException("O alimento é obrigatório.");
-        }
-
-        if (unidade == null || unidade.isBlank()) {
-            throw new IllegalArgumentException("A unidade é obrigatória.");
-        }
-
-        if (validade == null || validade.isBlank()) {
-            throw new IllegalArgumentException("A validade é obrigatória.");
-        }
-
-        if (destino == null || destino.isBlank()) {
-            throw new IllegalArgumentException("O destino é obrigatório.");
+            throw new IllegalArgumentException("Alimento é obrigatório.");
         }
 
         if (quantidade <= 0) {
-            throw new IllegalArgumentException("A quantidade deve ser maior que zero.");
+            throw new IllegalArgumentException("Quantidade deve ser maior que zero.");
+        }
+
+        if (unidade == null || unidade.isBlank()) {
+            throw new IllegalArgumentException("Unidade é obrigatória.");
+        }
+
+        if (validade == null || validade.isBlank()) {
+            throw new IllegalArgumentException("Validade é obrigatória.");
+        }
+
+        try {
+            LocalDate dataValidade = LocalDate.parse(validade, FORMATO_DATA);
+
+            if (dataValidade.isBefore(LocalDate.now())) {
+                throw new IllegalArgumentException(
+                        "A validade não pode ser anterior à data atual."
+                );
+            }
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "Validade deve estar no formato dd/MM/yyyy."
+            );
+        }
+
+        if (destino == null || destino.isBlank()) {
+            throw new IllegalArgumentException("Destino é obrigatório.");
         }
     }
 }
