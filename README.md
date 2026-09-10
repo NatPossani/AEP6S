@@ -126,6 +126,7 @@ Aplicação: aep-banco-alimentos
 MongoDB:   aep-mongo
 ```
 10. Testes Automatizados
+
 Execute:
 ```
 docker compose up -d mongodb
