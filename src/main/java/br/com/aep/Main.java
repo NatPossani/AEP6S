@@ -1,9 +1,12 @@
 package br.com.aep;
 
 import br.com.aep.model.Doacao;
+import br.com.aep.model.ItemDoacao;
+import br.com.aep.repository.MongoConnection;
 import br.com.aep.repository.MongoDoacaoRepository;
 import br.com.aep.service.DoacaoService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -13,7 +16,8 @@ public class Main {
         String mongoUri = System.getenv()
                 .getOrDefault("MONGO_URI", "mongodb://localhost:27017");
 
-        MongoDoacaoRepository repository = new MongoDoacaoRepository(mongoUri);
+        MongoConnection mongo = new MongoConnection(mongoUri);
+        MongoDoacaoRepository repository = new MongoDoacaoRepository(mongo.getDatabase());
         DoacaoService service = new DoacaoService(repository);
         Scanner scanner = new Scanner(System.in);
 
@@ -49,7 +53,7 @@ public class Main {
             }
         }
 
-        repository.fechar();
+        mongo.fechar();
         scanner.close();
     }
 
@@ -69,12 +73,9 @@ public class Main {
         DadosDoacao dados = lerDados(scanner);
 
         Doacao doacao = service.cadastrar(
-                dados.nomeDoador(),
-                dados.alimento(),
-                dados.quantidade(),
-                dados.unidade(),
-                dados.validade(),
-                dados.destino()
+                dados.doadorCodigo(),
+                dados.instituicaoCodigo(),
+                dados.itens()
         );
 
         System.out.println("\nDoaçao cadastrada com sucesso!");
@@ -120,12 +121,9 @@ public class Main {
 
         if (service.atualizar(
                 codigo,
-                dados.nomeDoador(),
-                dados.alimento(),
-                dados.quantidade(),
-                dados.unidade(),
-                dados.validade(),
-                dados.destino())) {
+                dados.doadorCodigo(),
+                dados.instituicaoCodigo(),
+                dados.itens())) {
             System.out.println("\nDoaçao atualizada com sucesso!");
         } else {
             System.out.println("\nNao foi possível atualizar.");
@@ -144,48 +142,65 @@ public class Main {
     }
 
     private static DadosDoacao lerDados(Scanner scanner) {
-        System.out.print("Nome do doador: ");
-        String nome = scanner.nextLine();
+        System.out.print("Código do doador: ");
+        String doadorCodigo = scanner.nextLine();
 
-        System.out.print("Alimento: ");
-        String alimento = scanner.nextLine();
+        System.out.print("Código da instituiçao: ");
+        String instituicaoCodigo = scanner.nextLine();
 
-        System.out.print("Quantidade(somente números): ");
-        int quantidade = Integer.parseInt(scanner.nextLine());
+        List<ItemDoacao> itens = new ArrayList<>();
+        boolean adicionandoItens = true;
 
-        System.out.print("Unidade (kg, unidade, caixa...): ");
-        String unidade = scanner.nextLine();
+        System.out.println("Informe os itens. Deixe o alimento em branco para encerrar.");
 
-        System.out.print("Validade (DD/MM/AAAA): ");
-        String validade = scanner.nextLine();
+        while (adicionandoItens) {
+            System.out.print("Alimento: ");
+            String alimento = scanner.nextLine();
 
-        System.out.print("Destino: ");
-        String destino = scanner.nextLine();
+            if (alimento.isBlank()) {
+                adicionandoItens = false;
+                continue;
+            }
 
-        return new DadosDoacao(
-                nome, alimento, quantidade, unidade, validade, destino
-        );
+            System.out.print("Quantidade(somente números): ");
+            int quantidade = Integer.parseInt(scanner.nextLine());
+
+            System.out.print("Unidade (kg, unidade, caixa...): ");
+            String unidade = scanner.nextLine();
+
+            System.out.print("Validade (DD/MM/AAAA): ");
+            String validade = scanner.nextLine();
+
+            itens.add(new ItemDoacao(alimento, quantidade, unidade, validade));
+        }
+
+        return new DadosDoacao(doadorCodigo, instituicaoCodigo, itens);
     }
 
     private static void imprimir(Doacao doacao) {
         System.out.println("\n====================================");
         System.out.println("Código: " + doacao.getCodigo());
-        System.out.println("Doador: " + doacao.getNomeDoador());
-        System.out.println("Alimento: " + doacao.getAlimento());
-        System.out.println("Quantidade: " + doacao.getQuantidade()
-                + " " + doacao.getUnidade());
-        System.out.println("Validade: " + doacao.getValidade());
-        System.out.println("Destino: " + doacao.getDestino());
+        System.out.println("Doador: " + doacao.getDoadorCodigo());
+        System.out.println("Instituiçao: " + doacao.getInstituicaoCodigo());
+        System.out.println("Data: " + doacao.getDataRegistro());
+        System.out.println("Status: " + doacao.getStatus());
+
+        if (doacao.getItens() != null) {
+            for (ItemDoacao item : doacao.getItens()) {
+                System.out.println("- " + item.getAlimento()
+                        + " | " + item.getQuantidade()
+                        + " " + item.getUnidade()
+                        + " | validade " + item.getValidade());
+            }
+        }
+
         System.out.println("====================================");
     }
 
     private record DadosDoacao(
-            String nomeDoador,
-            String alimento,
-            int quantidade,
-            String unidade,
-            String validade,
-            String destino
+            String doadorCodigo,
+            String instituicaoCodigo,
+            List<ItemDoacao> itens
     ) {
     }
 }

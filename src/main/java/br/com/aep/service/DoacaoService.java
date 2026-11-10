@@ -1,29 +1,30 @@
 package br.com.aep.service;
 
 import br.com.aep.model.Doacao;
+import br.com.aep.model.ItemDoacao;
 import br.com.aep.repository.DoacaoRepository;
-
-import java.util.List;
-import java.util.UUID;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 public class DoacaoService {
 
     private final DoacaoRepository repository;
 
     private static final DateTimeFormatter FORMATO_DATA =
-        DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public DoacaoService(DoacaoRepository repository) {
         this.repository = repository;
     }
 
-    public Doacao cadastrar(String nomeDoador, String alimento, int quantidade,
-                            String unidade, String validade, String destino) {
-        validar(nomeDoador, alimento, quantidade, unidade, validade, destino);
+    public Doacao cadastrar(String doadorCodigo, String instituicaoCodigo,
+                            List<ItemDoacao> itens) {
+        List<ItemDoacao> itensNormalizados = validar(doadorCodigo, instituicaoCodigo, itens);
 
         String codigo = UUID.randomUUID()
                 .toString()
@@ -32,12 +33,11 @@ public class DoacaoService {
 
         Doacao doacao = new Doacao(
                 codigo,
-                nomeDoador.trim(),
-                alimento.trim(),
-                quantidade,
-                unidade.trim(),
-                validade.trim(),
-                destino.trim()
+                doadorCodigo.trim().toUpperCase(),
+                instituicaoCodigo.trim().toUpperCase(),
+                LocalDate.now().format(FORMATO_DATA),
+                "RECEBIDA",
+                itensNormalizados
         );
 
         repository.salvar(doacao);
@@ -56,19 +56,17 @@ public class DoacaoService {
         return repository.buscarPorCodigo(codigo.trim().toUpperCase());
     }
 
-    public boolean atualizar(String codigo, String nomeDoador, String alimento,
-                             int quantidade, String unidade, String validade,
-                             String destino) {
-        validar(nomeDoador, alimento, quantidade, unidade, validade, destino);
+    public boolean atualizar(String codigo, String doadorCodigo,
+                             String instituicaoCodigo, List<ItemDoacao> itens) {
+        List<ItemDoacao> itensNormalizados = validar(doadorCodigo, instituicaoCodigo, itens);
 
         Doacao doacao = new Doacao(
                 codigo.trim().toUpperCase(),
-                nomeDoador.trim(),
-                alimento.trim(),
-                quantidade,
-                unidade.trim(),
-                validade.trim(),
-                destino.trim()
+                doadorCodigo.trim().toUpperCase(),
+                instituicaoCodigo.trim().toUpperCase(),
+                LocalDate.now().format(FORMATO_DATA),
+                "RECEBIDA",
+                itensNormalizados
         );
 
         return repository.atualizar(codigo.trim().toUpperCase(), doacao);
@@ -82,30 +80,52 @@ public class DoacaoService {
         return repository.excluir(codigo.trim().toUpperCase());
     }
 
-    private void validar(String nomeDoador, String alimento, int quantidade,
-                         String unidade, String validade, String destino) {
-        if (nomeDoador == null || nomeDoador.isBlank()) {
-            throw new IllegalArgumentException("Nome do doador é obrigatório.");
+    private List<ItemDoacao> validar(String doadorCodigo, String instituicaoCodigo,
+                                     List<ItemDoacao> itens) {
+        if (doadorCodigo == null || doadorCodigo.isBlank()) {
+            throw new IllegalArgumentException("Código do doador é obrigatório.");
         }
 
-        if (alimento == null || alimento.isBlank()) {
+        if (instituicaoCodigo == null || instituicaoCodigo.isBlank()) {
+            throw new IllegalArgumentException("Código da instituição é obrigatório.");
+        }
+
+        if (itens == null || itens.isEmpty()) {
+            throw new IllegalArgumentException("A doação deve ter pelo menos um item.");
+        }
+
+        List<ItemDoacao> itensNormalizados = new ArrayList<>();
+
+        for (ItemDoacao item : itens) {
+            itensNormalizados.add(validarItem(item));
+        }
+
+        return itensNormalizados;
+    }
+
+    private ItemDoacao validarItem(ItemDoacao item) {
+        if (item == null) {
+            throw new IllegalArgumentException("Item da doação é obrigatório.");
+        }
+
+        if (item.getAlimento() == null || item.getAlimento().isBlank()) {
             throw new IllegalArgumentException("Alimento é obrigatório.");
         }
 
-        if (quantidade <= 0) {
+        if (item.getQuantidade() <= 0) {
             throw new IllegalArgumentException("Quantidade deve ser maior que zero.");
         }
 
-        if (unidade == null || unidade.isBlank()) {
+        if (item.getUnidade() == null || item.getUnidade().isBlank()) {
             throw new IllegalArgumentException("Unidade é obrigatória.");
         }
 
-        if (validade == null || validade.isBlank()) {
+        if (item.getValidade() == null || item.getValidade().isBlank()) {
             throw new IllegalArgumentException("Validade é obrigatória.");
         }
 
         try {
-            LocalDate dataValidade = LocalDate.parse(validade, FORMATO_DATA);
+            LocalDate dataValidade = LocalDate.parse(item.getValidade(), FORMATO_DATA);
 
             if (dataValidade.isBefore(LocalDate.now())) {
                 throw new IllegalArgumentException(
@@ -118,8 +138,11 @@ public class DoacaoService {
             );
         }
 
-        if (destino == null || destino.isBlank()) {
-            throw new IllegalArgumentException("Destino é obrigatório.");
-        }
+        return new ItemDoacao(
+                item.getAlimento().trim(),
+                item.getQuantidade(),
+                item.getUnidade().trim(),
+                item.getValidade().trim()
+        );
     }
 }

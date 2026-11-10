@@ -1,8 +1,7 @@
 package br.com.aep.repository;
 
 import br.com.aep.model.Doacao;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
+import br.com.aep.model.ItemDoacao;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
@@ -14,13 +13,19 @@ import static com.mongodb.client.model.Filters.eq;
 
 public class MongoDoacaoRepository implements DoacaoRepository {
 
-    private final MongoClient client;
+    static final String COLLECTION_NAME = "doacoes";
+
     private final MongoCollection<Document> collection;
+    private final MongoConnection connection;
 
     public MongoDoacaoRepository(String uri) {
-        client = MongoClients.create(uri);
-        MongoDatabase database = client.getDatabase("aep_banco_alimentos");
-        collection = database.getCollection("doacoes");
+        connection = new MongoConnection(uri);
+        collection = connection.getDatabase().getCollection(COLLECTION_NAME);
+    }
+
+    public MongoDoacaoRepository(MongoDatabase database) {
+        connection = null;
+        collection = database.getCollection(COLLECTION_NAME);
     }
 
     @Override
@@ -65,29 +70,54 @@ public class MongoDoacaoRepository implements DoacaoRepository {
         return collection.deleteOne(eq("codigo", codigo)).getDeletedCount() > 0;
     }
 
+    public void fechar() {
+        if (connection != null) {
+            connection.fechar();
+        }
+    }
+
     private Document toDocument(Doacao doacao) {
+        List<Document> itens = new ArrayList<>();
+
+        if (doacao.getItens() != null) {
+            for (ItemDoacao item : doacao.getItens()) {
+                itens.add(new Document("alimento", item.getAlimento())
+                        .append("quantidade", item.getQuantidade())
+                        .append("unidade", item.getUnidade())
+                        .append("validade", item.getValidade()));
+            }
+        }
+
         return new Document("codigo", doacao.getCodigo())
-                .append("nomeDoador", doacao.getNomeDoador())
-                .append("alimento", doacao.getAlimento())
-                .append("quantidade", doacao.getQuantidade())
-                .append("unidade", doacao.getUnidade())
-                .append("validade", doacao.getValidade())
-                .append("destino", doacao.getDestino());
+                .append("doadorCodigo", doacao.getDoadorCodigo())
+                .append("instituicaoCodigo", doacao.getInstituicaoCodigo())
+                .append("dataRegistro", doacao.getDataRegistro())
+                .append("status", doacao.getStatus())
+                .append("itens", itens);
     }
 
     private Doacao fromDocument(Document documento) {
+        List<ItemDoacao> itens = new ArrayList<>();
+        List<Document> itensDocumento = documento.getList("itens", Document.class);
+
+        if (itensDocumento != null) {
+            for (Document item : itensDocumento) {
+                itens.add(new ItemDoacao(
+                        item.getString("alimento"),
+                        item.getInteger("quantidade"),
+                        item.getString("unidade"),
+                        item.getString("validade")
+                ));
+            }
+        }
+
         return new Doacao(
                 documento.getString("codigo"),
-                documento.getString("nomeDoador"),
-                documento.getString("alimento"),
-                documento.getInteger("quantidade"),
-                documento.getString("unidade"),
-                documento.getString("validade"),
-                documento.getString("destino")
+                documento.getString("doadorCodigo"),
+                documento.getString("instituicaoCodigo"),
+                documento.getString("dataRegistro"),
+                documento.getString("status"),
+                itens
         );
-    }
-
-    public void fechar() {
-        client.close();
     }
 }

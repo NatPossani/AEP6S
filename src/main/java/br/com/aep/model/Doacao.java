@@ -1,28 +1,29 @@
 package br.com.aep.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Doacao {
 
     private String codigo;
-    private String nomeDoador;
-    private String alimento;
-    private int quantidade;
-    private String unidade;
-    private String validade;
-    private String destino;
+    private String doadorCodigo;
+    private String instituicaoCodigo;
+    private String dataRegistro;
+    private String status;
+    private List<ItemDoacao> itens;
 
     public Doacao() {
+        this.itens = new ArrayList<>();
     }
 
-    public Doacao(String codigo, String nomeDoador, String alimento,
-                  int quantidade, String unidade, String validade,
-                  String destino) {
+    public Doacao(String codigo, String doadorCodigo, String instituicaoCodigo,
+                  String dataRegistro, String status, List<ItemDoacao> itens) {
         this.codigo = codigo;
-        this.nomeDoador = nomeDoador;
-        this.alimento = alimento;
-        this.quantidade = quantidade;
-        this.unidade = unidade;
-        this.validade = validade;
-        this.destino = destino;
+        this.doadorCodigo = doadorCodigo;
+        this.instituicaoCodigo = instituicaoCodigo;
+        this.dataRegistro = dataRegistro;
+        this.status = status;
+        this.itens = itens == null ? new ArrayList<>() : itens;
     }
 
     public String getCodigo() {
@@ -33,51 +34,43 @@ public class Doacao {
         this.codigo = codigo;
     }
 
-    public String getNomeDoador() {
-        return nomeDoador;
+    public String getDoadorCodigo() {
+        return doadorCodigo;
     }
 
-    public void setNomeDoador(String nomeDoador) {
-        this.nomeDoador = nomeDoador;
+    public void setDoadorCodigo(String doadorCodigo) {
+        this.doadorCodigo = doadorCodigo;
     }
 
-    public String getAlimento() {
-        return alimento;
+    public String getInstituicaoCodigo() {
+        return instituicaoCodigo;
     }
 
-    public void setAlimento(String alimento) {
-        this.alimento = alimento;
+    public void setInstituicaoCodigo(String instituicaoCodigo) {
+        this.instituicaoCodigo = instituicaoCodigo;
     }
 
-    public int getQuantidade() {
-        return quantidade;
+    public String getDataRegistro() {
+        return dataRegistro;
     }
 
-    public void setQuantidade(int quantidade) {
-        this.quantidade = quantidade;
+    public void setDataRegistro(String dataRegistro) {
+        this.dataRegistro = dataRegistro;
     }
 
-    public String getUnidade() {
-        return unidade;
+    public String getStatus() {
+        return status;
     }
 
-    public void setUnidade(String unidade) {
-        this.unidade = unidade;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
-    public String getValidade() {
-        return validade;
+    public List<ItemDoacao> getItens() {
+        return itens;
     }
 
-    public void setValidade(String validade) {
-        this.validade = validade;
-    }
-
-    public String getDestino() {
-        return destino;
-    }
-
-    public void setDestino(String destino) {
-        this.destino = destino;
+    public void setItens(List<ItemDoacao> itens) {
+        this.itens = itens == null ? new ArrayList<>() : itens;
     }
 }
