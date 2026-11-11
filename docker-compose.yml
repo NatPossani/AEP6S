@@ -1,7 +1,7 @@
 services:
 
   app:
-    image: 2xandrade/aep6s-banco-alimentos:primeira_entrega
+    image: 2xandrade/aep6s-banco-alimentos:segunda_entrega
     container_name: aep-banco-alimentos
     stdin_open: true
     tty: true

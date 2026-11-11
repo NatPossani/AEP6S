@@ -22,7 +22,7 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-COPY --from=build /app/target/banco-alimentos-aep-1.0.0.jar app.jar
+COPY --from=build /app/target/banco-alimentos-aep-2.0.0.jar app.jar
 
 ENV MONGO_URI=mongodb://aep-mongo:27017
 
