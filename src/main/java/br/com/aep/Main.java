@@ -1,5 +1,6 @@
 package br.com.aep;
 
+import br.com.aep.cli.Terminal;
 import br.com.aep.model.Doacao;
 import br.com.aep.model.ItemDoacao;
 import br.com.aep.repository.MongoConnection;
@@ -12,6 +13,12 @@ import java.util.Scanner;
 
 public class Main {
 
+    private static final List<String> CABECALHO_DOACOES =
+            List.of("CÓDIGO", "DOADOR", "INSTITUIÇÃO", "DATA", "STATUS", "ITENS");
+
+    private static final List<String> CABECALHO_ITENS =
+            List.of("ALIMENTO", "QTD", "UNIDADE", "VALIDADE");
+
     public static void main(String[] args) {
         String mongoUri = System.getenv()
                 .getOrDefault("MONGO_URI", "mongodb://localhost:27017");
@@ -20,36 +27,37 @@ public class Main {
         MongoDoacaoRepository repository = new MongoDoacaoRepository(mongo.getDatabase());
         DoacaoService service = new DoacaoService(repository);
         Scanner scanner = new Scanner(System.in);
+        Terminal terminal = Terminal.padrao();
 
         boolean executando = true;
 
-        System.out.println("====================================");
-        System.out.println("   BANCO DE ALIMENTOS COMUNITARIO");
-        System.out.println("====================================");
+        terminal.banner("BANCO DE ALIMENTOS COMUNITÁRIO",
+                "Gestão de doações · ODS 2 – Fome Zero");
 
         while (executando) {
-            exibirMenu();
-            String opcao = scanner.nextLine();
+            exibirMenu(terminal);
+            String opcao = scanner.nextLine().trim();
 
             try {
                 switch (opcao) {
-                    case "1" -> cadastrar(scanner, service);
-                    case "2" -> listar(service);
-                    case "3" -> buscar(scanner, service);
-                    case "4" -> atualizar(scanner, service);
-                    case "5" -> excluir(scanner, service);
+                    case "1" -> cadastrar(scanner, service, terminal);
+                    case "2" -> listar(service, terminal);
+                    case "3" -> buscar(scanner, service, terminal);
+                    case "4" -> atualizar(scanner, service, terminal);
+                    case "5" -> excluir(scanner, service, terminal);
                     case "0" -> {
                         executando = false;
-                        System.out.println("\nSistema encerrado.");
+                        terminal.linhaEmBranco();
+                        terminal.info("Sistema encerrado. Até logo!");
                     }
-                    default -> System.out.println("\nOpçao inválida.");
+                    default -> terminal.erro("Opção inválida. Escolha um número entre 0 e 5.");
                 }
             } catch (NumberFormatException e) {
-                System.out.println("\nQuantidade inválida.");
+                terminal.erro("Quantidade inválida. Informe apenas números inteiros.");
             } catch (IllegalArgumentException e) {
-                System.out.println("\nErro: " + e.getMessage());
+                terminal.erro(e.getMessage());
             } catch (Exception e) {
-                System.out.println("\nNao foi possível concluir a operaçao.");
+                terminal.erro("Não foi possível concluir a operação.");
             }
         }
 
@@ -57,20 +65,27 @@ public class Main {
         scanner.close();
     }
 
-    private static void exibirMenu() {
-        System.out.println("\n------------------------------------");
-        System.out.println("1 - Cadastrar doaçao");
-        System.out.println("2 - Listar doaçoes");
-        System.out.println("3 - Buscar doaçao");
-        System.out.println("4 - Atualizar doaçao");
-        System.out.println("5 - Excluir doaçao");
-        System.out.println("0 - Sair");
-        System.out.println("------------------------------------");
-        System.out.print("Escolha uma opçao: ");
+    private static void exibirMenu(Terminal terminal) {
+        terminal.linhaEmBranco();
+        terminal.caixa("MENU PRINCIPAL", List.of(
+                opcaoMenu(terminal, "1", "Cadastrar doação"),
+                opcaoMenu(terminal, "2", "Listar doações"),
+                opcaoMenu(terminal, "3", "Buscar doação"),
+                opcaoMenu(terminal, "4", "Atualizar doação"),
+                opcaoMenu(terminal, "5", "Excluir doação"),
+                "",
+                opcaoMenu(terminal, "0", "Sair")
+        ));
+        terminal.prompt("Escolha uma opção");
     }
 
-    private static void cadastrar(Scanner scanner, DoacaoService service) {
-        DadosDoacao dados = lerDados(scanner);
+    private static String opcaoMenu(Terminal terminal, String numero, String descricao) {
+        return terminal.destaque("[" + numero + "]") + "  " + descricao;
+    }
+
+    private static void cadastrar(Scanner scanner, DoacaoService service, Terminal terminal) {
+        terminal.secao("NOVA DOAÇÃO");
+        DadosDoacao dados = lerDados(scanner, terminal);
 
         Doacao doacao = service.cadastrar(
                 dados.doadorCodigo(),
@@ -78,123 +93,170 @@ public class Main {
                 dados.itens()
         );
 
-        System.out.println("\nDoaçao cadastrada com sucesso!");
-        System.out.println("Código: " + doacao.getCodigo());
+        terminal.linhaEmBranco();
+        terminal.sucesso("Doação cadastrada com sucesso!");
+        terminal.info("Código: " + terminal.destaque(doacao.getCodigo()));
     }
 
-    private static void listar(DoacaoService service) {
+    private static void listar(DoacaoService service, Terminal terminal) {
+        terminal.secao("DOAÇÕES CADASTRADAS");
         List<Doacao> doacoes = service.listar();
 
         if (doacoes.isEmpty()) {
-            System.out.println("\nNenhuma doaçao cadastrada.");
+            terminal.aviso("Nenhuma doação cadastrada.");
             return;
         }
 
+        List<List<String>> linhas = new ArrayList<>();
+
         for (Doacao doacao : doacoes) {
-            imprimir(doacao);
+            int quantidadeItens = doacao.getItens() == null ? 0 : doacao.getItens().size();
+
+            linhas.add(List.of(
+                    terminal.negrito(valor(doacao.getCodigo())),
+                    valor(doacao.getDoadorCodigo()),
+                    valor(doacao.getInstituicaoCodigo()),
+                    valor(doacao.getDataRegistro()),
+                    status(terminal, doacao.getStatus()),
+                    String.valueOf(quantidadeItens)
+            ));
         }
+
+        terminal.tabela(CABECALHO_DOACOES, linhas);
+        terminal.info(doacoes.size() == 1
+                ? "1 doação encontrada."
+                : doacoes.size() + " doações encontradas.");
     }
 
-    private static void buscar(Scanner scanner, DoacaoService service) {
-        System.out.print("\nDigite o código: ");
-        String codigo = scanner.nextLine();
+    private static void buscar(Scanner scanner, DoacaoService service, Terminal terminal) {
+        terminal.secao("BUSCAR DOAÇÃO");
+        String codigo = ler(scanner, terminal, "Código da doação");
 
         Doacao doacao = service.buscar(codigo);
 
+        terminal.linhaEmBranco();
         if (doacao == null) {
-            System.out.println("\nDoaçao nao encontrada.");
+            terminal.aviso("Doação não encontrada.");
         } else {
-            imprimir(doacao);
+            imprimir(doacao, terminal);
         }
     }
 
-    private static void atualizar(Scanner scanner, DoacaoService service) {
-        System.out.print("\nDigite o código da doaçao: ");
-        String codigo = scanner.nextLine();
+    private static void atualizar(Scanner scanner, DoacaoService service, Terminal terminal) {
+        terminal.secao("ATUALIZAR DOAÇÃO");
+        String codigo = ler(scanner, terminal, "Código da doação");
 
-        if (service.buscar(codigo) == null) {
-            System.out.println("\nDoaçao nao encontrada.");
+        Doacao atual = service.buscar(codigo);
+
+        terminal.linhaEmBranco();
+        if (atual == null) {
+            terminal.aviso("Doação não encontrada.");
             return;
         }
 
-        DadosDoacao dados = lerDados(scanner);
+        imprimir(atual, terminal);
+        terminal.linhaEmBranco();
+        terminal.info("Informe os novos dados da doação.");
 
+        DadosDoacao dados = lerDados(scanner, terminal);
+
+        terminal.linhaEmBranco();
         if (service.atualizar(
                 codigo,
                 dados.doadorCodigo(),
                 dados.instituicaoCodigo(),
                 dados.itens())) {
-            System.out.println("\nDoaçao atualizada com sucesso!");
+            terminal.sucesso("Doação atualizada com sucesso!");
         } else {
-            System.out.println("\nNao foi possível atualizar.");
+            terminal.erro("Não foi possível atualizar a doação.");
         }
     }
 
-    private static void excluir(Scanner scanner, DoacaoService service) {
-        System.out.print("\nDigite o código da doaçao: ");
-        String codigo = scanner.nextLine();
+    private static void excluir(Scanner scanner, DoacaoService service, Terminal terminal) {
+        terminal.secao("EXCLUIR DOAÇÃO");
+        String codigo = ler(scanner, terminal, "Código da doação");
 
+        terminal.linhaEmBranco();
         if (service.excluir(codigo)) {
-            System.out.println("\nDoaçao excluída com sucesso!");
+            terminal.sucesso("Doação excluída com sucesso!");
         } else {
-            System.out.println("\nDoaçao nao encontrada.");
+            terminal.aviso("Doação não encontrada.");
         }
     }
 
-    private static DadosDoacao lerDados(Scanner scanner) {
-        System.out.print("Código do doador: ");
-        String doadorCodigo = scanner.nextLine();
-
-        System.out.print("Código da instituiçao: ");
-        String instituicaoCodigo = scanner.nextLine();
+    private static DadosDoacao lerDados(Scanner scanner, Terminal terminal) {
+        String doadorCodigo = ler(scanner, terminal, "Código do doador");
+        String instituicaoCodigo = ler(scanner, terminal, "Código da instituição");
 
         List<ItemDoacao> itens = new ArrayList<>();
-        boolean adicionandoItens = true;
 
-        System.out.println("Informe os itens. Deixe o alimento em branco para encerrar.");
+        terminal.linhaEmBranco();
+        terminal.dica("Informe os itens da doação. Deixe o alimento em branco para finalizar.");
 
-        while (adicionandoItens) {
-            System.out.print("Alimento: ");
-            String alimento = scanner.nextLine();
+        while (true) {
+            terminal.subtitulo("Item " + (itens.size() + 1));
+            String alimento = ler(scanner, terminal, "Alimento");
 
             if (alimento.isBlank()) {
-                adicionandoItens = false;
-                continue;
+                break;
             }
 
-            System.out.print("Quantidade(somente números): ");
-            int quantidade = Integer.parseInt(scanner.nextLine());
-
-            System.out.print("Unidade (kg, unidade, caixa...): ");
-            String unidade = scanner.nextLine();
-
-            System.out.print("Validade (DD/MM/AAAA): ");
-            String validade = scanner.nextLine();
+            int quantidade = Integer.parseInt(
+                    ler(scanner, terminal, "Quantidade (somente números)").trim());
+            String unidade = ler(scanner, terminal, "Unidade (kg, unidade, caixa...)");
+            String validade = ler(scanner, terminal, "Validade (DD/MM/AAAA)");
 
             itens.add(new ItemDoacao(alimento, quantidade, unidade, validade));
+            terminal.sucesso("Item adicionado: " + quantidade + " " + unidade + " de " + alimento);
         }
 
         return new DadosDoacao(doadorCodigo, instituicaoCodigo, itens);
     }
 
-    private static void imprimir(Doacao doacao) {
-        System.out.println("\n====================================");
-        System.out.println("Código: " + doacao.getCodigo());
-        System.out.println("Doador: " + doacao.getDoadorCodigo());
-        System.out.println("Instituiçao: " + doacao.getInstituicaoCodigo());
-        System.out.println("Data: " + doacao.getDataRegistro());
-        System.out.println("Status: " + doacao.getStatus());
+    private static String ler(Scanner scanner, Terminal terminal, String rotulo) {
+        terminal.prompt(rotulo);
+        return scanner.nextLine();
+    }
 
-        if (doacao.getItens() != null) {
-            for (ItemDoacao item : doacao.getItens()) {
-                System.out.println("- " + item.getAlimento()
-                        + " | " + item.getQuantidade()
-                        + " " + item.getUnidade()
-                        + " | validade " + item.getValidade());
-            }
+    private static void imprimir(Doacao doacao, Terminal terminal) {
+        terminal.caixa("DOAÇÃO " + valor(doacao.getCodigo()), List.of(
+                campo(terminal, "Doador", valor(doacao.getDoadorCodigo())),
+                campo(terminal, "Instituição", valor(doacao.getInstituicaoCodigo())),
+                campo(terminal, "Data", valor(doacao.getDataRegistro())),
+                campo(terminal, "Status", status(terminal, doacao.getStatus()))
+        ));
+
+        List<ItemDoacao> itens = doacao.getItens();
+
+        if (itens == null || itens.isEmpty()) {
+            terminal.aviso("Nenhum item registrado nesta doação.");
+            return;
         }
 
-        System.out.println("====================================");
+        List<List<String>> linhas = new ArrayList<>();
+
+        for (ItemDoacao item : itens) {
+            linhas.add(List.of(
+                    valor(item.getAlimento()),
+                    String.valueOf(item.getQuantidade()),
+                    valor(item.getUnidade()),
+                    valor(item.getValidade())
+            ));
+        }
+
+        terminal.tabela(CABECALHO_ITENS, linhas);
+    }
+
+    private static String campo(Terminal terminal, String rotulo, String valor) {
+        return terminal.fraco(String.format("%-12s", rotulo)) + valor;
+    }
+
+    private static String status(Terminal terminal, String status) {
+        return terminal.estilo(valor(status), Terminal.NEGRITO, Terminal.VERDE);
+    }
+
+    private static String valor(String texto) {
+        return texto == null ? "—" : texto;
     }
 
     private record DadosDoacao(

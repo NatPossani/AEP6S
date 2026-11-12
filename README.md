@@ -3,6 +3,7 @@ PoC: Banco de Alimentos Comunitário
 1. Descrição
 
 A aplicação possui somente uma interface CLI, executada pelo terminal, sem frontend.
+A interface utiliza cores, caixas e tabelas para facilitar a leitura das informações, mantendo toda a interação pelo terminal.
 O projeto foi pensado para demonstrar os conceitos de programação orientada a objetos, persistência em banco de dados NoSQL, operações CRUD, testes automatizados e organização básica de um projeto de software.
 
 2. ODS
@@ -20,13 +21,19 @@ Com ele, as operações básicas de cadastro, consulta, atualização e remoçã
 
 4. Funcionalidades
 
-Nesta primeira versão:
-cadastrar doação;
-listar doações;
-buscar doação por código;
+Nesta versão:
+cadastrar doação, informando o código do doador, o código da instituição e um ou mais itens (alimento, quantidade, unidade e validade);
+listar doações em formato de tabela;
+buscar doação por código, exibindo seus dados e itens;
 atualizar doação;
 excluir doação;
 sair do sistema.
+
+Validações aplicadas no cadastro e na atualização:
+código do doador e da instituição são obrigatórios;
+a doação deve ter pelo menos um item;
+a quantidade deve ser maior que zero;
+a validade deve estar no formato DD/MM/AAAA e não pode ser anterior à data atual.
 4. Requisitos técnicos
 Java 17;
 
@@ -38,7 +45,7 @@ JUnit 5;
 Mockito;
 JaCoCo;
 Git/GitHub;
-Interface CLI.
+Interface CLI (com cores ANSI).
 5. Estrutura
 
 ```
@@ -46,19 +53,45 @@ Interface CLI.
 ├── src/
 │   ├── main/java/br/com/aep/
 │   │   ├── Main.java
+│   │   ├── cli/
+│   │   │   └── Terminal.java
 │   │   ├── model/
-│   │   │   └── Doacao.java
+│   │   │   ├── Contato.java
+│   │   │   ├── Doacao.java
+│   │   │   ├── Doador.java
+│   │   │   ├── Endereco.java
+│   │   │   ├── Instituicao.java
+│   │   │   └── ItemDoacao.java
 │   │   ├── repository/
 │   │   │   ├── DoacaoRepository.java
-│   │   │   └── MongoDoacaoRepository.java
+│   │   │   ├── DoadorRepository.java
+│   │   │   ├── InstituicaoRepository.java
+│   │   │   ├── MongoConnection.java
+│   │   │   ├── MongoDoacaoRepository.java
+│   │   │   ├── MongoDoadorRepository.java
+│   │   │   └── MongoInstituicaoRepository.java
 │   │   └── service/
 │   │       └── DoacaoService.java
 │   │
 │   └── test/java/br/com/aep/
-│       ├── DoacaoServiceTest.java
-│       ├── DoacaoTest.java
 │       ├── MainTest.java
-│       └── MongoDoacaoRepositoryTest.java
+│       ├── cli/
+│       │   └── TerminalTest.java
+│       ├── model/
+│       │   ├── ContatoTest.java
+│       │   ├── DoacaoTest.java
+│       │   ├── DoadorTest.java
+│       │   ├── EnderecoTest.java
+│       │   ├── InstituicaoTest.java
+│       │   └── ItemDoacaoTest.java
+│       ├── repository/
+│       │   ├── MongoConnectionTest.java
+│       │   ├── MongoDoacaoRepositoryTest.java
+│       │   ├── MongoDoadorRepositoryTest.java
+│       │   ├── MongoInstituicaoRepositoryTest.java
+│       │   └── MongoMocks.java
+│       └── service/
+│           └── DoacaoServiceTest.java
 │
 ├── Dockerfile
 ├── docker-compose.yml
@@ -89,15 +122,17 @@ mongodb://localhost:27017
 ```
 No Docker Compose, a aplicação utiliza:
 ```
-mongodb://localhost:27017
+mongodb://mongodb:27017
 ```
 Banco:
 ```
 aep_banco_alimentos
 ```
-Coleção:
+Coleções:
 ```
 doacoes
+doadores
+instituicoes
 ```
 8. Execução Local
 
@@ -115,6 +150,15 @@ PowerShell:
 ```
 $env:MONGO_URI="mongodb://localhost:27017"
 ```
+A interface utiliza cores ANSI. Caso o terminal não exiba as cores corretamente, é possível desativá-las com a variável de ambiente NO_COLOR:
+Linux:
+```
+export NO_COLOR=1
+```
+PowerShell:
+```
+$env:NO_COLOR="1"
+```
 9. Execução com o Docker
 
 O projeto possui um Dockerfile para criar a imagem da aplicação e um docker-compose.yml para executar a aplicação junto com o MongoDB.
@@ -122,6 +166,7 @@ Para iniciar:
 ```
 docker compose up -d
 ```
+O docker-compose.yml utiliza a imagem publicada no Docker Hub (2xandrade/aep6s-banco-alimentos). Para executar alterações feitas no código, é necessário gerar e publicar uma nova imagem a partir do Dockerfile.
 Para acessar o programa:
 ```
 docker attach aep-banco-alimentos
@@ -145,27 +190,64 @@ MongoDB:   aep-mongo
 
 Execute:
 ```
-docker compose up -d mongodb
 mvn test
 ```
-A suíte possui testes unitários e testes de integração com MongoDB.
-Os testes da camada de serviço utilizam Mockito para isolar o repositório.
-Os testes de integração utilizam uma instância real do MongoDB. Para executar a suíte completa, o MongoDB deve estar acessível em:
+A suíte possui testes unitários para todas as camadas: model, repository, service, a interface CLI (Terminal) e o menu (Main).
+Os testes utilizam Mockito para simular o MongoDB, portanto não é necessário ter o banco em execução para rodá-los.
+Os testes dos repositórios simulam as coleções do MongoDB e verificam a conversão dos objetos para documentos (incluindo os subdocumentos de itens, contato e endereço).
+Os testes do Main simulam a entrada do usuário no terminal e verificam as mensagens exibidas.
+A cobertura atual é de 100% (linhas e branches). O relatório do JaCoCo é gerado em:
 ```
-mongodb://localhost:27017
+target/site/jacoco/index.html
 ```
 Além disso, o `pom.xml` possui uma regra que faz o build falhar caso a cobertura de linhas fique abaixo de 70%.
 11. MongoDB
 
-Exemplo de documento do banco:
+Exemplo de documento da coleção doacoes (os itens são armazenados como subdocumentos):
 ```json
 {
   "codigo": "A12BC345",
-  "nomeDoador": "Mercado Central",
-  "alimento": "Arroz",
-  "quantidade": 20,
-  "unidade": "kg",
-  "validade": "30/12/2026",
-  "destino": "Instituição Esperança"
+  "doadorCodigo": "MERCADO01",
+  "instituicaoCodigo": "INST-ESPERANCA",
+  "dataRegistro": "12/11/2026",
+  "status": "RECEBIDA",
+  "itens": [
+    {
+      "alimento": "Arroz",
+      "quantidade": 20,
+      "unidade": "kg",
+      "validade": "30/06/2027"
+    },
+    {
+      "alimento": "Feijão",
+      "quantidade": 15,
+      "unidade": "kg",
+      "validade": "15/03/2027"
+    }
+  ]
+}
+```
+Exemplo de documento da coleção doadores (com o subdocumento de contato):
+```json
+{
+  "codigo": "MERCADO01",
+  "nome": "Mercado Central",
+  "tipo": "EMPRESA",
+  "contato": {
+    "telefone": "44999990000",
+    "email": "contato@mercadocentral.com"
+  }
+}
+```
+Exemplo de documento da coleção instituicoes (com o subdocumento de endereço):
+```json
+{
+  "codigo": "INST-ESPERANCA",
+  "nome": "Instituição Esperança",
+  "endereco": {
+    "rua": "Rua das Flores, 100",
+    "cidade": "Maringá",
+    "estado": "PR"
+  }
 }
 ```
